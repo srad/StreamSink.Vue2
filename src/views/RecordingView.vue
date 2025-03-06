@@ -24,25 +24,23 @@
             <div class="modal-body bg-light p-0 m-0" style="overflow: hidden">
               <div class="d-flex flex-row" style="height: 90%">
                 <div class="d-flex flex-column m-0" :class="{ 'w-80': markings.length > 0, 'w-100': markings.length === 0 }">
-                  <ClientOnly>
-                    <video
-                      class="view h-100"
-                      controls
-                      ref="video"
-                      @volumechange="
-                        (event) => {
-                          muted = (event.target as HTMLVideoElement).muted;
-                          volume = (event.target as HTMLVideoElement).volume;
-                        }
-                      "
-                      @loadeddata="loadData"
-                      @timeupdate="timeupdate"
-                      :muted="muted"
-                      autoplay>
-                      <source :src="videoUrl" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </ClientOnly>
+                  <video
+                    class="view h-100"
+                    controls
+                    ref="video"
+                    @volumechange="
+                      (event) => {
+                        isMuted = (event.target as HTMLVideoElement).muted;
+                        playerVolume = (event.target as HTMLVideoElement).volume;
+                      }
+                    "
+                    @loadeddata="loadData"
+                    @timeupdate="timeupdate"
+                    :muted="isMuted"
+                    autoplay>
+                    <source :src="videoUrl" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
                 </div>
 
                 <div v-if="markings.length > 0" class="d-flex flex-column m-0 p-2" :class="{ 'w-20': markings.length > 0 }">
@@ -55,10 +53,7 @@
               </div>
 
               <div ref="stripeContainer" class="d-flex flex-row w-100 position-relative overflow-y-scroll" style="height: 10%">
-                <ClientOnly
-                  ><!-- calling the file .client.vue didnt make it client only??? -->
-                  <Stripe :src="stripeUrl" :disabled="cutInterval != undefined" :paused="isPaused" :timecode="timeCode" :duration="duration" :markings="markings" @selecting="() => pause()" @marking="(m) => (markings = m)" @seek="seek" />
-                </ClientOnly>
+                <RecordingStripe :src="stripeUrl" :disabled="cutInterval != undefined" :paused="isPaused" :timecode="timeCode" :duration="duration" :markings="markings" @selecting="() => pause()" @marking="(m) => (markings = m)" @seek="seek" />
               </div>
             </div>
 
@@ -115,23 +110,20 @@
 </template>
 
 <script setup lang="ts">
-import type { DatabaseRecording } from "~/services/api/v1/StreamSinkClient.ts";
-import Stripe from "~/components/Stripe.vue";
-import RecordingFavButton from "~/components/controls/RecordingFavButton.vue";
-import BusyOverlay from "~/components/BusyOverlay.vue";
-import { ref, watch, onUnmounted, onMounted } from "vue";
-import { useRouter, onBeforeRouteLeave, useRoute } from "vue-router";
-import { useCookie } from "#app/composables/cookie";
+import type { DatabaseRecording } from "@/services/api/v1/StreamSinkClient";
+import RecordingStripe from "@/components/RecordingStripe.vue";
+import RecordingFavButton from "@/components/controls/RecordingFavButton.vue";
+import BusyOverlay from "@/components/BusyOverlay.vue";
+import { inject, onMounted, onUnmounted, ref, useTemplateRef, watch } from "vue";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import ModalConfirmDialog from "~/components/modals/ModalConfirmDialog.client.vue";
-import MarkingsTable from "~/components/MarkingsTable.vue";
-import { useToastStore } from "~~/stores/toast";
-import { useJobStore } from "~~/stores/job";
-import { useAsyncData, useRuntimeConfig } from "nuxt/app";
-import { useNuxtApp } from "#app/nuxt";
-import type { Marking } from "~/types";
-import { useTemplateRef } from "vue";
-import { useHead } from "#imports";
+import ModalConfirmDialog from "@/components/modals/ModalConfirmDialog.vue";
+import MarkingsTable from "@/components/MarkingsTable.vue";
+import { useToastStore } from "@/stores/toast";
+import { useJobStore } from "@/stores/job";
+import type { Marking } from "@/appTypes";
+import { createClient } from "@/services/api/v1/ClientFactory";
+import Cookies from "js-cookie";
 
 // --------------------------------------------------------------------------------------
 // Declarations
@@ -143,24 +135,23 @@ const { t } = useI18n();
 const jobStore = useJobStore();
 const toastStore = useToastStore();
 
-const volume = useCookie<number>("volume", {
-  readonly: false,
-  default: () => 1,
-  maxAge: 60 * 60 * 24 * 14,
-});
-const muted = useCookie<boolean>("muted", {
-  readonly: false,
-  default: () => true,
-  maxAge: 60 * 60 * 24 * 14,
-});
+if (!Cookies.get("volume")) {
+  Cookies.set("volume", "1", { expires: 60 * 60 * 24 * 14 });
+}
+
+if (!Cookies.get("muted")) {
+  Cookies.set("muted", "true", { expires: 60 * 60 * 24 * 14 });
+}
 
 const stripeContainer = useTemplateRef<HTMLElement>("stripeContainer");
 const video = useTemplateRef<HTMLVideoElement>("video");
 
-const config = useRuntimeConfig();
-const fileUrl = config.public.fileUrl;
+const fileUrl = inject("fileUrl") as string;
+const stripeUrl = ref("");
+const videoUrl = ref("");
 
-const isMuted = ref(false);
+const isMuted = ref(Cookies.get("muted") === "true");
+const playerVolume = ref(0);
 const isMounted = ref(false);
 const isPaused = ref(false);
 const isLoaded = ref(false);
@@ -175,7 +166,7 @@ const busy = ref(false);
 const showConfirmDialog = ref(false);
 const deleteFileAfterCut = ref(false);
 
-let cutInterval: NodeJS.Timeout | number | undefined;
+let cutInterval: number | undefined;
 
 // --------------------------------------------------------------------------------------
 // Hooks
@@ -317,8 +308,8 @@ const destroy = () => {
 
   unloadVideo();
 
-  const { $client } = useNuxtApp();
-  $client.recordings
+  const client = createClient();
+  client.recordings
     .recordingsDelete(recording.value.recordingId)
     .then(() => {
       // Remove from Job list if existent.
@@ -326,24 +317,24 @@ const destroy = () => {
       toastStore.success({ title: "Video deleted", message: recording.value!.filename });
       router.back();
     })
-    .catch((err: any) => {
+    .catch((err) => {
       alert(err);
     });
 };
 
 const cutVideo = () => {
-  const { $client } = useNuxtApp();
+  const client = createClient();
   const starts = markings.value.map((m) => String(m.timestart.toFixed(4)));
   const ends = markings.value.map((m) => String(m.timeend.toFixed(4)));
 
-  $client.recordings
+  client.recordings
     .cutCreate(id.value!, {
       starts,
       ends,
       deleteAfterCut: deleteFileAfterCut.value,
     })
     .then(() => (markings.value = []))
-    .catch((err: any) => alert(err))
+    .catch((err) => alert(err))
     .finally(() => (showConfirmDialog.value = false));
 };
 
@@ -365,7 +356,7 @@ const loadData = () => {
   if (isMounted.value && video.value) {
     duration.value = video.value.duration;
     isLoaded.value = true;
-    video.value.volume = volume.value || 0.0;
+    video.value.volume = playerVolume.value || 0.0;
     play();
   }
 };
@@ -384,18 +375,14 @@ const unloadVideo = () => {
   }
 };
 
-const { $client } = useNuxtApp();
-id.value = Number(route.params.id);
-const { data } = await useAsyncData<DatabaseRecording>("rec", () => $client.recordings.recordingsDetail(id.value!));
-recording.value = data.value;
-const stripeUrl = fileUrl + "/" + recording.value?.previewStripe;
-const videoUrl = fileUrl + "/" + recording.value?.pathRelative;
+onMounted(async () => {
+  const client = createClient();
+  id.value = Number(route.params.id);
+  const data = await client.recordings.recordingsDetail(id.value);
+  recording.value = data;
+  stripeUrl.value = fileUrl + "/" + recording.value?.previewStripe;
+  videoUrl.value = fileUrl + "/" + recording.value?.pathRelative;
 
-useHead({
-  title: recording.value?.filename,
-});
-
-onMounted(() => {
   window.addEventListener("orientationchange", rotate);
   isMounted.value = true;
   isShown.value = true;

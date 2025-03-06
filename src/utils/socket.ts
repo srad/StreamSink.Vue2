@@ -1,7 +1,12 @@
-import { useNuxtApp } from '#imports';
-import { useAuthStore } from '~~/stores/auth';
+import { useAuthStore } from "../stores/auth";
 
-type ListenerType = (data: Object) => void;
+declare global {
+  interface Window {
+    APP_SOCKETURL: string;
+  }
+}
+
+type ListenerType = (data: unknown) => void;
 
 let connection: WebSocket | null = null;
 const listeners: { [key: string]: ListenerType[] } = {};
@@ -12,7 +17,7 @@ const notify = (event: string, data: object) => {
   }
 
   if (listeners[event]) {
-    listeners[event]!.forEach(fn => fn(data));
+    listeners[event]!.forEach((fn) => fn(data));
   }
 };
 
@@ -21,11 +26,6 @@ const notify = (event: string, data: object) => {
 // Or the connection is created and resolved, once the websocket is open.
 export const connectSocket = () => {
   return new Promise<void>((resolve, reject) => {
-    // Ignore on server.
-    if (!import.meta.browser) {
-      resolve();
-      return;
-    }
     // Already connected
     if (connection !== null) {
       resolve();
@@ -35,27 +35,27 @@ export const connectSocket = () => {
     // Not logged-in.
     const authStore = useAuthStore();
     if (!authStore.isLoggedIn) {
-      reject('WebSocket missing authorization token');
+      reject("WebSocket missing authorization token");
+      return;
     }
 
-    const { $config } = useNuxtApp();
-    connection = new WebSocket($config.public.socketUrl + '?Authorization=' + authStore.getToken);
+    connection = new WebSocket(window.APP_SOCKETURL + "?Authorization=" + authStore.getToken);
 
-    connection.addEventListener('message', (msg: any) => {
-      const json = JSON.parse(msg.data) as { name: string, data: Object };
+    connection.addEventListener("message", (msg: { data: string }) => {
+      const json = JSON.parse(msg.data) as { name: string; data: object };
       notify(json.name, json.data);
     });
 
-    connection.addEventListener('open', () => {
+    connection.addEventListener("open", () => {
       resolve();
-      console.log('open ws');
+      console.log("open ws");
     });
 
-    connection.addEventListener('close', () => {
-      console.log('close ws');
+    connection.addEventListener("close", () => {
+      console.log("close ws");
     });
 
-    connection.addEventListener('error', (ev: Event) => {
+    connection.addEventListener("error", (ev: Event) => {
       console.error(ev);
       reject(ev);
     });
@@ -94,7 +94,8 @@ export const socketOn = (event: string, fn: ListenerType) => {
  * listeners.off();
  */
 export const socketCreateListeners = function () {
-  return (function () { // Immediately invoked to create separate scope where listeners are stored.
+  return (function () {
+    // Immediately invoked to create separate scope where listeners are stored.
     const fns: ListenerType[] = [];
 
     return {
@@ -120,29 +121,29 @@ export const socketCreateListeners = function () {
             }
           }
         }
-      }
+      },
     };
-  }());
+  })();
 };
 
 export const MessageType = {
-  HeartBeat: 'heartbeat',
+  HeartBeat: "heartbeat",
 
-  ChannelOnline: 'channel:online',
-  ChannelOffline: 'channel:offline',
-  ChannelThumbnail: 'channel:thumbnail',
-  ChannelStart: 'channel:start',
+  ChannelOnline: "channel:online",
+  ChannelOffline: "channel:offline",
+  ChannelThumbnail: "channel:thumbnail",
+  ChannelStart: "channel:start",
 
-  RecordingAdd: 'recording:add',
+  RecordingAdd: "recording:add",
 
-  JobActivate: 'job:activate',
-  JobDone: 'job:done',
-  JobDeactivate: 'job:deactivate',
-  JobStart: 'job:start',
-  JobCreate: 'job:create',
-  JobDelete: 'job:delete',
-  JobPreviewDone: 'job:preview:done',
-  JobProgress: 'job:progress',
-  JobDeleted: 'job:deleted',
-  JobPreviewProgress: 'job:preview:progress'
+  JobActivate: "job:activate",
+  JobDone: "job:done",
+  JobDeactivate: "job:deactivate",
+  JobStart: "job:start",
+  JobCreate: "job:create",
+  JobDelete: "job:delete",
+  JobPreviewDone: "job:preview:done",
+  JobProgress: "job:progress",
+  JobDeleted: "job:deleted",
+  JobPreviewProgress: "job:preview:progress",
 };

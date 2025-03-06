@@ -1,4 +1,4 @@
-const tagAlphabet = /^[0-9a-z]+(\-*[0-9a-z]+)*$/;
+const tagAlphabet = /^[0-9a-z]+(-*[0-9a-z]+)*$/;
 
 /**
  * Validates a single tag (string).
@@ -11,12 +11,12 @@ export const validTag = (tag: string) => tagAlphabet.test(tag);
  * @param tags string array of tags.
  */
 export const validateTags = (tags: string[]): boolean => {
-  for (let tag of tags) {
+  for (const tag of tags) {
     if (!tagAlphabet.test(tag)) {
       return false;
     }
   }
-  return true
+  return true;
 };
 
 /**
@@ -34,7 +34,7 @@ export const parseTagsString = (str: string): string[] => {
   }
 
   for (let i = 0; i < str.length; i++) {
-    const c = str.charAt(i)
+    const c = str.charAt(i);
     if (c === ",") {
       add(token);
       token = "";

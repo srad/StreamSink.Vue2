@@ -65,10 +65,10 @@
 </template>
 
 <script setup lang="ts">
-import { MessageType, socketOn, connectSocket, closeSocket } from "../../utils/socket";
+import { closeSocket, connectSocket, MessageType, socketOn } from "../../utils/socket";
 import { useChannelStore } from "../../stores/channel";
 import { useJobStore } from "../../stores/job";
-import { computed, onMounted, watch, ref, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import DiskStatus from "../DiskStatus.vue";
 import RecordingControls from "../RecordingControls.vue";

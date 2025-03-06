@@ -1,5 +1,5 @@
-import { createClient } from "./api/v1/ClientFactory.ts";
-import { type RequestsAuthenticationRequest } from "./api/v1/StreamSinkClient.ts";
+import { createClient } from "./api/v1/ClientFactory";
+import { type RequestsAuthenticationRequest } from "./api/v1/StreamSinkClient";
 
 export interface AuthInfo {
   token: string;
@@ -11,7 +11,7 @@ export interface AuthHeader {
 
 const TOKEN_NAME = "jwt";
 
-const clientBuilder = () => createClient(AuthService.getToken(), import.meta.env.API_URL);
+const clientBuilder = () => createClient(AuthService.getToken(), window.APP_APIURL);
 
 export default class AuthService {
   static login(user: RequestsAuthenticationRequest) {

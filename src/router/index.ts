@@ -6,25 +6,25 @@ import VideoView from "../views/RecordingView.vue";
 import LogView from "../views/LogsView.vue";
 import JobView from "../views/JobView.vue";
 import AdminView from "../views/AdminView.vue";
-import ChannelView from "../views/ChannelView.vue";
 import RandomView from "../views/RandomView.vue";
-import ChannelsView from "../views/ChannelsView.vue";
+import ChannelView from "@/views/ChannelView.vue";
 import LoginView from "../views/LoginView.vue";
 import RegisterView from "../views/RegisterView.vue";
-import AuthService from "../services/auth.service.ts";
+import { useAuthStore } from "@/stores/auth";
 
 const routes = [
   { path: "", redirect: "/streams" },
   { path: "/", redirect: "/streams/live/tab" },
-  { path: "/login", name: "Login", component: LoginView, meta: { title: "Login" } },
-  { path: "/register", name: "Register", component: RegisterView, meta: { title: "Register" } },
+  { path: "/login", name: "Login", component: LoginView, meta: { title: "Login", layout: "auth" } },
+  { path: "/register", name: "Register", component: RegisterView, meta: { title: "Register", layout: "auth" } },
   {
     path: "/channel/:id/:channelName",
     name: "Channels",
-    component: ChannelsView,
+    component: ChannelView,
+    props: true,
     meta: { title: "Channel" },
   },
-  { path: "/channels", name: "Channels", component: ChannelsView, meta: { title: "Channels" } },
+  //{ path: "/channels", name: "Channels", component: ChannelsView, meta: { title: "Channels" } },
   { path: "/admin", name: "Admin", component: AdminView, meta: { title: "Admin" } },
   { path: "/jobs/:tab?", name: "Job", component: JobView, meta: { title: "Jobs" } },
   {
@@ -32,13 +32,6 @@ const routes = [
     name: "Stream",
     component: StreamView,
     meta: { title: "Stream" },
-  },
-  {
-    path: "/channel/:id/:name?",
-    name: "Channel",
-    component: ChannelView,
-    props: true,
-    meta: { title: "Channel" },
   },
   { path: "/filter", name: "Filter", component: FilterView, meta: { title: "Latest" } },
   { path: "/random", name: "Random", component: RandomView, meta: { title: "Random" } },
@@ -56,27 +49,20 @@ router.afterEach((to) => {
 });
 
 router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore();
   const publicPages = ["/login", "/register"];
-  const authRequired = !publicPages.includes(to.path);
-  const hasAuthHeader = AuthService.getAuthHeader();
-  const isLoggedIn = AuthService.isLoggedIn();
+  const isLoggedIn = authStore.isLoggedIn;
 
-  if (isLoggedIn && (to.path === "/login" || to.path === "/register")) {
+  if (!isLoggedIn && publicPages.includes(to.path)) {
+    alert("''");
+    next();
+    return;
+  }
+
+  if (isLoggedIn && publicPages.includes(to.path)) {
+    alert('/');
     next("/");
     return;
-  }
-
-  if (isLoggedIn && !authRequired) {
-    next();
-    return;
-  }
-
-  // trying to access a restricted page + not logged in
-  // redirect to login page
-  if (authRequired && !hasAuthHeader) {
-    next("/login");
-  } else {
-    next();
   }
 });
 

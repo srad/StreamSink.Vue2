@@ -25,7 +25,7 @@
 import StreamInfo from "./StreamInfo.vue";
 import Preview from "./RecordingPreview.vue";
 import type { ServicesChannelInfo as ChannelInfo } from "../services/api/v1/StreamSinkClient";
-import { computed, ref } from "vue";
+import { computed, inject, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useChannelStore } from "../stores/channel";
 import { useI18n } from "vue-i18n";
@@ -52,7 +52,7 @@ const { t } = useI18n();
 
 const router = useRouter();
 
-const fileUrl = process.env.fileUrl;
+const fileUrl = inject('fileUrl') as string;
 
 const destroyed = ref(false);
 const busy = ref(false);

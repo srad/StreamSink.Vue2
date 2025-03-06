@@ -36,7 +36,7 @@
 import RecordInfo from "./RecordInfo.vue";
 import Preview from "./RecordingPreview.vue";
 import type { DatabaseRecording as RecordingResponse } from "../services/api/v1/StreamSinkClient";
-import { watch, ref } from "vue";
+import { watch, ref, inject } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { createClient } from "../services/api/v1/ClientFactory";
@@ -70,8 +70,8 @@ const checked = ref(false);
 const busy = ref(false);
 const destroyed = ref(false);
 
-const apiUrl = process.env.VUE_API_URL;
-const fileUrl = process.env.VUE_FILE_URL;
+const apiUrl = inject('apiUrl') as string;
+const fileUrl = inject('fileUrl') as string;
 
 const previewVideoUrl = `${fileUrl}/${props.recording.previewVideo}`;
 // TODO: Pass a default image from the server, if the preview image is missing.

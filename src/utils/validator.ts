@@ -1,6 +1,6 @@
-export interface FieldConfig<T> {
-  name: T;
-  validator: (t: T) => boolean;
+export interface FieldConfig {
+  name: string;
+  validator(t: unknown): boolean;
   validMessage: string;
   invalidMessage: string;
 }
@@ -10,25 +10,26 @@ export interface ValidationMessage {
   isValid: boolean;
 }
 
-class FieldValidator {
+class FieldValidator<T> {
   private readonly fieldConfig: { [key: string]: FieldConfig } = {};
 
   constructor(config: FieldConfig[]) {
-    config.forEach((fieldConfig) => this.fieldConfig[fieldConfig.name] = fieldConfig);
+    config.forEach((fieldConfig) => (this.fieldConfig[fieldConfig.name] = fieldConfig));
   }
 
-  validate(name: string, value: any): ValidationMessage {
+  validate(name: string, value: T): ValidationMessage {
     if (!this.fieldConfig[name]) {
       throw new Error(`Invalid field config: ${this.fieldConfig[name]}`);
     }
-    const isValidTest = this.fieldConfig[name]!.validator(value);
+
+    const isValidTest = this.fieldConfig[name].validator(value);
 
     const message = isValidTest ? this.fieldConfig[name]!.validMessage : this.fieldConfig[name]!.invalidMessage;
     return { isValid: isValidTest, message: `${message}: "${value}"` };
   }
 
-  validateAll(validationRequest: { name: string, value: any }[]): ValidationMessage[] {
-    return validationRequest.map(request => this.validate(request.name, request.value));
+  validateAll(validationRequest: { name: string; value: T }[]): ValidationMessage[] {
+    return validationRequest.map((request) => this.validate(request.name, request.value));
   }
 }
 

@@ -1,4 +1,4 @@
-import type { DatabaseJob, DatabaseJob as Job, ServicesChannelInfo as ChannelInfo } from "@/services/api/v1/StreamSinkClient";
+import type { DatabaseJob, DatabaseJob as Job, ServicesChannelInfo as ChannelInfo } from "./services/api/v1/StreamSinkClient";
 
 export enum AlertType {
   Default,
@@ -11,75 +11,75 @@ export enum AlertType {
   Dark,
 }
 
-export interface TaskInfo {
+export type TaskInfo = {
   steps: number;
   step: number;
   pid: number;
   command: string;
   message: string;
-}
+};
 
-export interface JobMessage<T> {
+export type JobMessage<T> = {
   data: T;
   job: Job;
-}
+};
 
-export interface TaskComplete {
+export type TaskComplete = {
   steps: number;
   step: number;
   message: string;
-}
+};
 
-export interface TaskProgress {
+export type TaskProgress = {
   current: number;
   total: number;
   steps: number;
   step: number;
   message: string;
-}
+};
 
-export interface JobState {
+export type JobState = {
   jobs: Job[];
   jobsCount: number;
-}
+};
 
-export interface ToastState {
+export type ToastState = {
   toasts: Toast[];
-}
+};
 
 export type ToastKind = "success" | "error" | "warning" | "info";
 
-export interface Toast {
+export type Toast = {
   title: string;
   message: string;
   hide: boolean;
   created: Date;
   countdown: number;
   kind: ToastKind;
-}
+};
 
-export interface AuthState {
+export type AuthState = {
   loggedIn: boolean;
   token: string | null | undefined;
-}
+};
 
-export interface ChannelState {
+export type ChannelState = {
   channels: ChannelInfo[];
-}
+};
 
-export interface Marking {
+export type Marking = {
   selected?: boolean;
   start: number;
   end: number;
   timestart: number;
   timeend: number;
-}
+};
 
-export interface AuthHeader {
+export type AuthHeader = {
   Authorization: string;
-}
+};
 
-export interface ChannelUpdate {
+export type ChannelUpdate = {
   isPaused: boolean;
   channelId: number;
   channelName: string;
@@ -87,11 +87,11 @@ export interface ChannelUpdate {
   displayName: string;
   skipStart: number;
   minDuration: number;
-}
+};
 
-export interface JobTableItem extends DatabaseJob {
+export type JobTableItem = DatabaseJob & {
   createdAtFromNow: string;
   startedFromNow?: string;
   completedAtFromNow?: string;
   jobDuration?: string;
-}
+};

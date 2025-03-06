@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, computed, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, useTemplateRef, watch } from "vue";
 import type { IChartApi, ISeriesApi } from "lightweight-charts";
 import { createChart, LineSeries } from "lightweight-charts";
 
@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const container = useTemplateRef<HTMLDivElement>("container");
 let chart: IChartApi | null = null;
-let cpuSeries: ISeriesApi<never> | null = null;
+let cpuSeries: ISeriesApi<"Line"> | null = null;
 
 const getIn = computed(() =>
   (props.series || [])
@@ -27,6 +27,7 @@ const getIn = computed(() =>
 watch(
   () => props.series,
   () => {
+    //@ts-expect-error just overkill
     cpuSeries?.setData(getIn.value.sort((a, b) => a.time - b.time));
     chart?.timeScale().fitContent();
   },

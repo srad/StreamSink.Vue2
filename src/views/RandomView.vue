@@ -17,27 +17,24 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-primary" @click="fetch" v-if="route.params.type==='random'">
-          Refresh
-        </button>
+        <button class="btn btn-primary" @click="fetch" v-if="route.params.type === 'random'">Refresh</button>
       </div>
-      <hr/>
+      <hr />
     </div>
   </div>
   <div class="row">
     <div v-for="recording in recordings" :key="recording.filename" class="mb-3 col-lg-5 col-xl-4 col-xxl-4 col-md-10">
-      <RecordingItem :show-title="true" :recording="recording" @destroyed="destroyRecording" :show-selection="false"/>
+      <RecordingItem :show-title="true" :recording="recording" @destroyed="destroyRecording" :show-selection="false" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import RecordingItem from '@/components/RecordingItem.vue';
-import type { DatabaseRecording, DatabaseRecording as RecordingResponse } from '~/services/api/v1/StreamSinkClient';
-import { watch, ref } from 'vue';
-import { useNuxtApp } from '#app/nuxt';
-import { useRoute } from 'vue-router';
-import { useAsyncData } from '#app';
+import RecordingItem from "@/components/RecordingItem.vue";
+import type { DatabaseRecording as RecordingResponse } from "@/services/api/v1/StreamSinkClient";
+import { onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import { createClient } from "@/services/api/v1/ClientFactory";
 
 const route = useRoute();
 
@@ -45,22 +42,15 @@ watch(route, () => {
   fetch();
 });
 
-const filterLimit = route.params.limit as string || '25';
-const limits = ref([
-  25,
-  50,
-  100,
-  200,
-  500,
-  1000
-]);
+const filterLimit = (route.params.limit as string) || "25";
+const limits = ref([25, 50, 100, 200, 500, 1000]);
 
 const recordings = ref<RecordingResponse[]>([]);
 
 const fetch = async () => {
-  const { $client } = useNuxtApp();
-  const { data } = await useAsyncData<DatabaseRecording[]>('randomRecordings', () => $client.recordings.randomDetail(filterLimit));
-  recordings.value = data.value || [];
+  const client = createClient();
+  const data = await client.recordings.randomDetail(filterLimit);
+  recordings.value = data || [];
 };
 
 const destroyRecording = (recording: RecordingResponse) => {
@@ -72,5 +62,7 @@ const destroyRecording = (recording: RecordingResponse) => {
   }
 };
 
-await fetch();
+onMounted(async () => {
+  await fetch();
+});
 </script>

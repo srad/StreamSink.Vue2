@@ -75,13 +75,12 @@
 
 <script setup lang="ts">
 import Modal from "./ModalWindow.vue";
-import { ref, watch } from "vue";
+import { defineEmits, ref, watch } from "vue";
 import { randomString } from "../../utils/math";
 import AppAlert from "../AppAlert.vue";
 import { AlertType, type ChannelUpdate } from "../../appTypes";
 import { createValidator, type ValidationMessage } from "../../utils/validator";
 import CheckList from "../CheckList.vue";
-import { defineEmits } from "vue";
 
 // --------------------------------------------------------------------------------------
 // Props

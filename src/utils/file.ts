@@ -4,7 +4,7 @@
  * @param filename
  * @param parentElement DOM element used to temporarily attach the download element. Mostly document.body, can be used for tests.
  */
-export const downloadObjectAsJson = (data: object | any[], filename: string, parentElement: HTMLElement) => {
+export const downloadObjectAsJson = (data: object | unknown[], filename: string, parentElement: HTMLElement) => {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
   const downloadAnchorNode = document.createElement('a');
   downloadAnchorNode.setAttribute("href", dataStr);

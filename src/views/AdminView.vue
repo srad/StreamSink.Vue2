@@ -33,12 +33,12 @@
             <td class="align-middle pt-3 ps-3">
               <CPUChart :series="cpuLoadSeries" />
               <!--
-        <div class="progress">
-          <div class="progress-bar" role="progressbar" :style="{width: mainCpuLoad + '%' }" aria-valuenow="0"
-               aria-valuemin="0"
-               aria-valuemax="100"></div>
-        </div>
-        -->
+<div class="progress">
+<div class="progress-bar" role="progressbar" :style="{width: mainCpuLoad + '%' }" aria-valuenow="0"
+     aria-valuemin="0"
+     aria-valuemax="100"></div>
+</div>
+-->
             </td>
           </tr>
           <tr>
@@ -69,7 +69,7 @@
           <tr>
             <td colspan="2" class="p-0"></td>
           </tr>
-          <tr v-for="version in versions">
+          <tr v-for="version in versions" :key="version[0]">
             <td class="bg-light-subtle align-middle">
               {{ version[0] }}
             </td>
@@ -82,13 +82,12 @@
 </template>
 
 <script setup lang="ts">
-import type { HelpersCPUInfo, HelpersDiskInfo, HelpersNetInfo, HelpersSysInfo, ResponsesImportInfoResponse, ResponsesServerInfoResponse } from "@/services/api/v1/StreamSinkClient";
+import type { HelpersCPUInfo, HelpersDiskInfo, HelpersNetInfo, ResponsesServerInfoResponse } from "@/services/api/v1/StreamSinkClient";
 import TrafficChart from "@/components/charts/TrafficChart.vue";
 import CPUChart from "@/components/charts/CPUChart.vue";
-import { ref, onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
-
-type InfoPromise = [Promise<HelpersSysInfo>, Promise<ResponsesImportInfoResponse>];
+import { createClient } from "@/services/api/v1/ClientFactory";
 
 const build = import.meta.env.VITE_BUILD;
 const version = import.meta.env.VITE_VERSION;
@@ -106,58 +105,59 @@ const cpuInfo = ref<HelpersCPUInfo | undefined>(undefined);
 const diskInfo = ref<HelpersDiskInfo | undefined>(undefined);
 const netInfo = ref<HelpersNetInfo | undefined>(undefined);
 
-const id = ref<number | NodeJS.Timeout>(0);
+const id = ref<number>(0);
 
 //const receivedMb = computed(() => ((netInfo.value?.receiveBytes || 0) / 1024 / 1024).toFixed(2));
 //const transmittedMb = computed(() => ((netInfo.value?.transmitBytes || 0) / 1024 / 1024).toFixed(2));
 
 const startImport = async () => {
   if (window.confirm("Start Import?")) {
-    await $client.admin.importCreate();
+    const client = createClient();
+    await client.admin.importCreate();
     importing.value = true;
   }
 };
 
 const posters = async () => {
   if (window.confirm("Regenerate all posters?")) {
-    const { $client } = useNuxtApp();
-    await $client.recordings.generatePostersCreate();
+    const client = createClient();
+    await client.recordings.generatePostersCreate();
   }
 };
 
 const updateInfo = () => {
   if (window.confirm("Check all durations and update in database?")) {
-    const { $client } = useNuxtApp();
-    $client.recordings
+    const client = createClient();
+    client.recordings
       .updateinfoCreate()
       .then(() => (isUpdating.value = true))
-      .catch((res: any) => console.error(res.error));
+      .catch((res) => console.error((<{error: string}>res).error));
   }
 };
 
 const fetch = async () => {
   try {
-    const { $client } = useNuxtApp();
-    const { data } = await useAsyncData("infos", () => Promise.all<InfoPromise>([$client.info.infoDetail(1), $client.admin.importList()]));
+    const client = createClient();
+    const data = await Promise.all([client.info.infoDetail(1), client.admin.importList()]);
 
-    if (data.value) {
-      netInfo.value = data.value[0].netInfo;
-      cpuInfo.value = data.value[0].cpuInfo;
-      diskInfo.value = data.value[0].diskInfo;
+    if (data) {
+      netInfo.value = data[0].netInfo;
+      cpuInfo.value = data[0].cpuInfo;
+      diskInfo.value = data[0].diskInfo;
 
       trafficSeries.value = trafficSeries.value.concat({
-        in: data.value[0].netInfo.receiveBytes / 1024 / 1024,
-        out: data.value[0].netInfo.transmitBytes / 1024 / 1024,
+        in: data[0].netInfo.receiveBytes / 1024 / 1024,
+        out: data[0].netInfo.transmitBytes / 1024 / 1024,
         time: Date.now(),
       });
       cpuLoadSeries.value = cpuLoadSeries.value.concat({
-        load: data.value[0].cpuInfo.loadCpu[0]!.load * 100,
+        load: data[0].cpuInfo.loadCpu[0]!.load * 100,
         time: Date.now(),
       });
 
-      importing.value = data.value![1].isImporting || false;
-      importProgress.value = data.value![1].progress || 0;
-      importSize.value = data.value![1].size || 0;
+      importing.value = data![1].isImporting || false;
+      importProgress.value = data![1].progress || 0;
+      importSize.value = data![1].size || 0;
     }
   } catch (err) {
     alert(err);
@@ -168,19 +168,18 @@ onBeforeRouteLeave(() => {
   clearInterval(id.value);
 });
 
-await fetch();
-const { $client } = useNuxtApp();
-const { data } = await useAsyncData("versions", () => $client.admin.versionList());
-const serverInfo = data.value as ResponsesServerInfoResponse;
-
-const versions = [
-  ["Client-Version", version],
-  ["Client-Revision", build],
-  ["Server-Version", serverInfo.version],
-  ["Server-Revision", serverInfo.commit],
-];
+const versions: [string, string][] = [];
 
 onMounted(async () => {
+  const client = createClient();
+  const data = await client.admin.versionList();
+  const serverInfo = data as ResponsesServerInfoResponse;
+
+  versions.push(["Client-Version", version]);
+  versions.push(["Client-Revision", build]);
+  versions.push(["Server-Version", serverInfo.version]);
+  versions.push(["Server-Revision", serverInfo.commit]);
+
   id.value = setInterval(fetch, 2500);
 });
 </script>

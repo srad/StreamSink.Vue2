@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import type { ServicesChannelInfo as ChannelResponse } from "../services/api/v1/StreamSinkClient";
 import { validTag } from "../utils/parser";
@@ -106,7 +106,7 @@ const emit = defineEmits<{
 const tagArray = ref<string[]>(props.channel.tags || []);
 const tagVal = ref("");
 const showTagInput = ref(false);
-const thread = ref<NodeJS.Timeout | number | null>(null);
+const thread = ref<null | ReturnType<typeof setTimeout>>(null);
 const secRecording = ref(props.channel.minRecording * 60);
 const tagInput = ref<HTMLInputElement | null>(null);
 const processingTag = ref(false);

@@ -4,7 +4,6 @@ import { defineStore } from "pinia";
 import type { JobMessage, JobState, TaskComplete, TaskInfo, TaskProgress } from "../appTypes";
 
 export const useJobStore = defineStore("job", {
-  persist: false,
   state(): JobState {
     return {
       jobs: [],
@@ -16,7 +15,7 @@ export const useJobStore = defineStore("job", {
       return this.jobs || [];
     },
     getOpen(): Job[] {
-      return (this.jobs || []).filter((x) => x.status === DatabaseJobStatus.StatusJobOpen);
+      return (this.jobs || []).filter((x: Job) => x.status === DatabaseJobStatus.StatusJobOpen);
     },
   },
   actions: {
@@ -48,7 +47,7 @@ export const useJobStore = defineStore("job", {
       }
     },
     progress(message: JobMessage<TaskProgress>) {
-      const i = this.jobs.findIndex((j) => j.jobId === message.job.jobId);
+      const i = this.jobs.findIndex((j: Job) => j.jobId === message.job.jobId);
       const progress = String((((message.data.step / message.data.steps) * message.data.current) / message.data.total) * 100);
       if (i !== -1) {
         this.jobs[i]!.progress = progress;

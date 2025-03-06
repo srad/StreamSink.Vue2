@@ -1,9 +1,15 @@
-import { ContentType, type DatabaseRecording, type DatabaseRecording as RecordingResponse } from "./StreamSinkClient";
-import { StreamSinkClient, HttpClient } from "./StreamSinkClient";
-import AuthService from "@/services/auth.service.ts";
+import { ContentType, type DatabaseRecording, type DatabaseRecording as RecordingResponse, HttpClient, StreamSinkClient } from "./StreamSinkClient";
+import { useAuthStore } from "@/stores/auth";
+
+declare global {
+  interface Window {
+    APP_APIURL: string;
+  }
+}
 
 export class MyClient extends StreamSinkClient<unknown> {
-  constructor(token: string | null, apiUrl: string) {
+  constructor(token: string | null | undefined, apiUrl: string) {
+    const authStore = useAuthStore();
     let auth = {};
     if (token) {
       auth = { Authorization: `Bearer ${token}` };
@@ -12,6 +18,26 @@ export class MyClient extends StreamSinkClient<unknown> {
       baseUrl: apiUrl,
       baseApiParams: {
         headers: { ...auth },
+      },
+      /**
+       * Redirect
+       * @param input
+       * @param init
+       */
+      customFetch: (input, init) => {
+        return new Promise<Response>((resolve, reject) => {
+          fetch(input, init)
+            .then((response) => {
+              if (response.status === 401 && !["/login", "/register"].includes(window.location.pathname)) {
+                authStore.logout();
+                // Unauthorized: Redirect to login page
+                window.location.assign("/login");
+                throw new Error("Unauthorized access, redirecting to login...");
+              }
+              resolve(response);
+            })
+            .catch(reject);
+        });
       },
     });
     super(client);
@@ -47,6 +73,7 @@ export class MyClient extends StreamSinkClient<unknown> {
   }
 }
 
-export const createClient = (token?: string | null, apiUrl?: string): MyClient => {
-  return new MyClient(token || AuthService.getToken(), apiUrl || import.meta.env.API_URL);
+export const createClient = (token?: string | null | undefined, apiUrl?: string): MyClient => {
+  const authStore = useAuthStore();
+  return new MyClient(token || authStore.getToken, apiUrl || window.APP_APIURL);
 };

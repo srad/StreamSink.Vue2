@@ -34,8 +34,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import AuthService from "@/services/auth.service.ts";
-import { createLog } from "@/utils/log.ts";
+import { createLog } from "@/utils/log";
+import { useAuthStore } from "@/stores/auth.ts";
 
 // --------------------------------------------------------------------------------------
 // Declarations
@@ -48,6 +48,8 @@ const loading = ref(false);
 const email = ref("");
 const password = ref("");
 
+const authStore = useAuthStore();
+
 const logger = createLog("register");
 
 // --------------------------------------------------------------------------------------
@@ -58,7 +60,7 @@ const register = async () => {
   try {
     loading.value = true;
     logger.info(`Registering ${email.value}`);
-    await AuthService.signup({ username: email.value, password: password.value });
+    await authStore.register({ username: email.value, password: password.value });
     await router.push("/login");
   } catch (res) {
     message.value = (<{ error: string }>res).error;
