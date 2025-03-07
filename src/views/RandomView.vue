@@ -1,4 +1,5 @@
 <template>
+  <LoadIndicator :busy="isLoading">
   <div class="row my-2">
     <div class="col">
       <div class="d-flex justify-content-end">
@@ -27,6 +28,7 @@
       <RecordingItem :show-title="true" :recording="recording" @destroyed="destroyRecording" :show-selection="false" />
     </div>
   </div>
+  </LoadIndicator>
 </template>
 
 <script setup lang="ts">
@@ -35,8 +37,11 @@ import type { DatabaseRecording as RecordingResponse } from "@/services/api/v1/S
 import { onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { createClient } from "@/services/api/v1/ClientFactory";
+import LoadIndicator from "@/components/LoadIndicator.vue";
 
 const route = useRoute();
+
+const isLoading = ref(true);
 
 watch(route, () => {
   fetch();
@@ -64,5 +69,6 @@ const destroyRecording = (recording: RecordingResponse) => {
 
 onMounted(async () => {
   await fetch();
+  isLoading.value = false;
 });
 </script>

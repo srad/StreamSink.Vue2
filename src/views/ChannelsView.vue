@@ -1,8 +1,14 @@
 <template>
-  <div>
+  <LoadIndicator :busy="isLoading">
     <div class="mb-2">
       <div class="d-flex justify-content-end">
-        <button @click="() => downloadChannelsAsJson()" type="button" class="btn btn-sm btn-primary me-2">Export channels</button>
+        <button @click="() => settingsStore.setChannelsLayout('grid')" type="button" class="btn btn-sm me-2" :class="{ 'btn-success': settingsStore.isChannelsGridLayout, 'btn-secondary': settingsStore.isChannelsListLayout }">
+          <i class="bi bi-grid"></i>
+        </button>
+        <button @click="() => settingsStore.setChannelsLayout('list')" type="button" class="btn btn-sm me-2" :class="{ 'btn-secondary': settingsStore.isChannelsGridLayout, 'btn-success': settingsStore.isChannelsListLayout }">
+          <i class="bi bi-list"></i>
+        </button>
+        <button @click="downloadChannelsAsJson" type="button" class="btn btn-sm btn-primary me-2">Export channels</button>
         <button @click="inputFileClick" type="button" class="btn btn-sm btn-primary">Import channels</button>
         <input ref="channelsFile" accept="application/json" type="file" name="importChannels" hidden @change="inputFileChanged" />
       </div>
@@ -14,69 +20,35 @@
         <hr />
       </div>
     </div>
-    <div class="table-responsive border p-0 mb-2">
-      <table class="table table-bordered table-hover table-sm m-0">
-        <thead>
-          <tr class="align-middle text-center">
-            <th rowspan="2" style="width: 1%" class="bg-light p-2">Preview</th>
-            <th rowspan="2" style="width: 10%" class="bg-light p-2">Name</th>
-            <th rowspan="2" style="width: 20%" class="bg-light p-2">Link</th>
-            <th rowspan="2" style="width: 5%" class="bg-light p-2">Favourite?</th>
-            <th rowspan="2" style="width: 5%" class="bg-light p-2">Recording?</th>
-            <th style="width: 5%" class="bg-light text-center p-2">Count ({{ totalCount }})</th>
-            <th style="width: 5%" class="bg-light text-center p-2">Size ({{ totalSize.toFixed(1) }}GB)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr :key="channel.channelId" v-for="channel in channels" class="align-middle">
-            <td class="text-center p-0">
-              <img alt="preview" :src="`${fileUrl}/${channel.preview}`" class="rounded" style="height: 50px; width: auto" />
-            </td>
-            <td class="px-2">
-              <RouterLink class="text-decoration-none" :to="`/channel/${channel.channelId}/${channel.channelName}`">
-                <h6 class="m-0">{{ channel.channelName }}</h6>
-              </RouterLink>
-            </td>
-            <td>
-              <a :href="channel.url" target="_blank">{{ channel.url }}</a>
-            </td>
-            <td class="px-2 text-center">
-              <ChannelFavButton :bookmarked="channel.fav" :channel-id="channel.channelId" />
-            </td>
-            <td class="px-2 text-center">
-              <div v-if="channel.isRecording"><i class="bi text-danger blink bi-record-fill pulse"></i> Recording</div>
-            </td>
-            <td class="px-2 text-center">{{ channel.recordingsCount }}</td>
-            <td class="px-2 text-center">{{ (channel.recordingsSize / 1024 / 1024 / 1024).toFixed(2) }} GB</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+
+    <ChannelsList v-if="settingsStore.isChannelsListLayout" :channels="channels" />
+    <ChannelsGrid v-else :channels="channels" />
+  </LoadIndicator>
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, useTemplateRef } from "vue";
-import ChannelFavButton from "@/components/controls/ChannelFavButton.vue";
+import { onMounted, ref, useTemplateRef } from "vue";
+
 import type { DatabaseChannel, ServicesChannelInfo } from "@/services/api/v1/StreamSinkClient";
 import { createClient } from "@/services/api/v1/ClientFactory";
 import { downloadObjectAsJson } from "@/utils/file";
+import LoadIndicator from "@/components/LoadIndicator.vue";
+import { useSettingsStore } from "@/stores/settings.ts";
+import ChannelsGrid from "@/components/channels/ChannelsGrid.vue";
+import ChannelsList from "@/components/channels/ChannelsList.vue";
+
+//type ChannelsViewLayout = "grid" | "list";
 
 // --------------------------------------------------------------------------------------
 // refs
 // --------------------------------------------------------------------------------------
 
 const isImporting = ref(false);
-const fileUrl = inject("fileUrl") as string;
 const channelsFile = useTemplateRef<HTMLInputElement>("channelsFile");
 const channels = ref<ServicesChannelInfo[]>([]);
+const isLoading = ref(true);
 
-// --------------------------------------------------------------------------------------
-// Computes
-// --------------------------------------------------------------------------------------
-
-const totalSize = computed(() => (channels.value || []).map((x) => x.recordingsSize).reduce((a, b) => a + b, 0) / 1024 / 1024 / 1024);
-const totalCount = computed(() => (channels.value || []).map((x) => x.recordingsCount).reduce((a, b) => a + b, 0));
+const settingsStore = useSettingsStore();
 
 // --------------------------------------------------------------------------------------
 // Functions
@@ -94,10 +66,6 @@ const downloadChannelsAsJson = async () => {
 
 const inputFileClick = () => channelsFile.value?.click();
 
-/**
- * File input event listener.
- * @param event
- */
 const inputFileChanged = (event: Event) => {
   const target = event.target as HTMLInputElement;
 
@@ -145,7 +113,7 @@ onMounted(async () => {
   const client = createClient();
   const data = await client.channels.channelsList();
   const sortedChannels: ServicesChannelInfo[] = (data || []).sort((a: ServicesChannelInfo, b: ServicesChannelInfo) => a.channelName.localeCompare(b.channelName));
-  //@ts-expect-error nonsense
-  channels.value = ref(sortedChannels);
+  channels.value = sortedChannels;
+  isLoading.value = false;
 });
 </script>

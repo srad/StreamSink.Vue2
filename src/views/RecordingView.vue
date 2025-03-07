@@ -24,20 +24,7 @@
             <div class="modal-body bg-light p-0 m-0" style="overflow: hidden">
               <div class="d-flex flex-row" style="height: 90%">
                 <div class="d-flex flex-column m-0" :class="{ 'w-80': markings.length > 0, 'w-100': markings.length === 0 }">
-                  <video
-                    class="view h-100"
-                    controls
-                    ref="video"
-                    @volumechange="
-                      (event) => {
-                        isMuted = (event.target as HTMLVideoElement).muted;
-                        playerVolume = (event.target as HTMLVideoElement).volume;
-                      }
-                    "
-                    @loadeddata="loadData"
-                    @timeupdate="timeupdate"
-                    :muted="isMuted"
-                    autoplay>
+                  <video class="view h-100" controls ref="video" @volumechange="volumeChanged($event)" @loadeddata="loadData" @timeupdate="timeupdate" :muted="isMuted" autoplay>
                     <source :src="videoUrl" type="video/mp4" />
                     Your browser does not support the video tag.
                   </video>
@@ -123,7 +110,7 @@ import { useToastStore } from "@/stores/toast";
 import { useJobStore } from "@/stores/job";
 import type { Marking } from "@/appTypes";
 import { createClient } from "@/services/api/v1/ClientFactory";
-import Cookies from "js-cookie";
+import { useSettingsStore } from "@/stores/settings.ts";
 
 // --------------------------------------------------------------------------------------
 // Declarations
@@ -134,14 +121,7 @@ const { t } = useI18n();
 
 const jobStore = useJobStore();
 const toastStore = useToastStore();
-
-if (!Cookies.get("volume")) {
-  Cookies.set("volume", "1", { expires: 60 * 60 * 24 * 14 });
-}
-
-if (!Cookies.get("muted")) {
-  Cookies.set("muted", "true", { expires: 60 * 60 * 24 * 14 });
-}
+const settingsStore = useSettingsStore();
 
 const stripeContainer = useTemplateRef<HTMLElement>("stripeContainer");
 const video = useTemplateRef<HTMLVideoElement>("video");
@@ -150,8 +130,7 @@ const fileUrl = inject("fileUrl") as string;
 const stripeUrl = ref("");
 const videoUrl = ref("");
 
-const isMuted = ref(Cookies.get("muted") === "true");
-const playerVolume = ref(0);
+const isMuted = ref(settingsStore.isMuted);
 const isMounted = ref(false);
 const isPaused = ref(false);
 const isLoaded = ref(false);
@@ -225,7 +204,7 @@ watch(playbackSpeed, function (val) {
 });
 
 // --------------------------------------------------------------------------------------
-// Methods
+// Function
 // --------------------------------------------------------------------------------------
 
 const pause = () => {
@@ -244,6 +223,16 @@ const forward = () => (video.value!.currentTime = (video.value?.currentTime || 0
 const stopCut = () => {
   pause();
   clearInterval(cutInterval);
+};
+
+const volumeChanged = (event: Event) => {
+  const isMuted = (event.target as HTMLVideoElement).muted;
+  if (isMuted) {
+    settingsStore.mute();
+  } else {
+    settingsStore.unmute();
+  }
+  settingsStore.setVolume((event.target as HTMLVideoElement).volume);
 };
 
 const playCut = () => {
@@ -356,7 +345,7 @@ const loadData = () => {
   if (isMounted.value && video.value) {
     duration.value = video.value.duration;
     isLoaded.value = true;
-    video.value.volume = playerVolume.value || 0.0;
+    video.value.volume = settingsStore.getVolume;
     play();
   }
 };

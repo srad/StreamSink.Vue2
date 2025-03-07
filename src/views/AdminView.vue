@@ -35,8 +35,8 @@
               <!--
 <div class="progress">
 <div class="progress-bar" role="progressbar" :style="{width: mainCpuLoad + '%' }" aria-valuenow="0"
-     aria-valuemin="0"
-     aria-valuemax="100"></div>
+ aria-valuemin="0"
+ aria-valuemax="100"></div>
 </div>
 -->
             </td>
@@ -82,15 +82,15 @@
 </template>
 
 <script setup lang="ts">
-import type { HelpersCPUInfo, HelpersDiskInfo, HelpersNetInfo, ResponsesServerInfoResponse } from "@/services/api/v1/StreamSinkClient";
+import type { HelpersCPUInfo, HelpersDiskInfo, HelpersNetInfo } from "@/services/api/v1/StreamSinkClient";
 import TrafficChart from "@/components/charts/TrafficChart.vue";
 import CPUChart from "@/components/charts/CPUChart.vue";
-import { onMounted, ref } from "vue";
+import { inject, onMounted, type Ref, ref } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { createClient } from "@/services/api/v1/ClientFactory";
 
-const build = import.meta.env.VITE_BUILD;
-const version = import.meta.env.VITE_VERSION;
+const build = inject("build");
+const version = inject("version");
 
 const importing = ref(false);
 const importProgress = ref(0);
@@ -131,7 +131,7 @@ const updateInfo = () => {
     client.recordings
       .updateinfoCreate()
       .then(() => (isUpdating.value = true))
-      .catch((res) => console.error((<{error: string}>res).error));
+      .catch((res) => console.error((<{ error: string }>res).error));
   }
 };
 
@@ -168,17 +168,16 @@ onBeforeRouteLeave(() => {
   clearInterval(id.value);
 });
 
-const versions: [string, string][] = [];
+const versions: Ref<[string, string][]> = ref([]);
 
 onMounted(async () => {
   const client = createClient();
   const data = await client.admin.versionList();
-  const serverInfo = data as ResponsesServerInfoResponse;
 
-  versions.push(["Client-Version", version]);
-  versions.push(["Client-Revision", build]);
-  versions.push(["Server-Version", serverInfo.version]);
-  versions.push(["Server-Revision", serverInfo.commit]);
+  versions.value.push(["Client-Version", version]);
+  versions.value.push(["Client-Revision", build]);
+  versions.value.push(["Server-Version", data.version]);
+  versions.value.push(["Server-Revision", data.commit]);
 
   id.value = setInterval(fetch, 2500);
 });

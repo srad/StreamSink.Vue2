@@ -1,6 +1,6 @@
 <template>
   <div>
-    <FavButton v-if="!busy" :data="{}" :faved="fav" @fav="bookmark" @unfav="bookmark" />
+    <FavButton v-if="!busy" :data="{}" :faved="fav" @fav="(data, event) => bookmark(event)" @unfav="(data, event) => bookmark(event)" @click.stop />
     <span v-else class="spinner-border spinner-border-sm" aria-hidden="true"></span>
   </div>
 </template>
@@ -39,7 +39,8 @@ watch(
 // Methods
 // --------------------------------------------------------------------------------------
 
-const bookmark = () => {
+const bookmark = (event: Event) => {
+  event.stopPropagation();
   busy.value = true;
   const client = createClient();
   const fn = fav.value ? client.channels.unfavPartialUpdate : client.channels.favPartialUpdate;
