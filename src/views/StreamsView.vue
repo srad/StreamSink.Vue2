@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <LoadIndicator :busy="isLoading">
     <ChannelModal @save="save" @close="showModal = false" title="Edit Stream" :saving="saving" :is-paused="isPaused" :channel-disabled="true" :clear="false" :channel-id="channelId" :show="showModal" :channel-name="channelName" :display-name="displayName" :url="url" :min-duration="minDuration" :skip-start="skipStart" />
 
     <!-- Search bar -->
@@ -94,7 +94,7 @@
       </div>
     </div>
     <!-- Body end -->
-  </div>
+  </LoadIndicator>
 </template>
 
 <script setup lang="ts">
@@ -106,6 +106,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { ChannelUpdate } from "@/appTypes";
 import { createClient } from "@/services/api/v1/ClientFactory";
+import LoadIndicator from "@/components/LoadIndicator.vue";
 
 // --------------------------------------------------------------------------------------
 // Declarations
@@ -124,6 +125,8 @@ const url = ref("");
 const minDuration = ref(20);
 const skipStart = ref(0);
 const favs = ref(route.query.fav === "1");
+
+const isLoading = ref(true);
 
 const saving = ref(false);
 
@@ -268,6 +271,7 @@ watch(tagFilter, (val) => {
 
 onMounted(async () => {
   await channelStore.load();
+  isLoading.value = false;
 });
 </script>
 

@@ -1,48 +1,50 @@
 <template>
-  <div>
-    <div class="row mb-2">
-      <div class="col">
-        <div class="d-flex justify-content-end">
-          <div class="d-flex justify-content-center me-2">
-            <!-- filter row -->
-            <div class="row align-items-center">
-              <div class="col-auto">
-                <select ref="filterColumnSelect" class="form-select form-select-sm" v-model="filterColumn" @change="routeFilter">
-                  <option value="" style="font-weight: bold" disabled>{{ t("filter.orderBy") }}</option>
-                  <option v-for="col in columns" :key="col[1]" :value="col[1]">{{ col[0] }}</option>
-                </select>
-              </div>
-              <div class="col-auto">
-                <select ref="sortOrderSelect" class="form-select form-select-sm text-capitalize" v-model="filterOrder" @input="routeFilter">
-                  <option value="" style="font-weight: bold" disabled>{{ t("filter.order") }}</option>
-                  <option v-for="o in order" :key="o" :value="o">{{ o }}</option>
-                </select>
-              </div>
-              <div class="col-auto">
-                <select ref="filterLimitSelect" id="limit" class="form-select form-select-sm" v-model="filterLimit" @change="routeFilter">
-                  <option value="" style="font-weight: bold" disabled>{{ t("filter.limit") }}</option>
-                  <option v-for="limit in limits" :key="limit" :value="limit">{{ limit }}</option>
-                </select>
-              </div>
+  <LoadIndicator :busy="isLoading">
+    <div>
+      <div class="row mb-2">
+        <div class="col">
+          <div class="d-flex justify-content-end">
+            <div class="d-flex justify-content-center me-2">
+              <!-- filter row -->
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <select ref="filterColumnSelect" class="form-select form-select-sm" v-model="filterColumn" @change="routeFilter">
+                    <option value="" style="font-weight: bold" disabled>{{ t("filter.orderBy") }}</option>
+                    <option v-for="col in columns" :key="col[1]" :value="col[1]">{{ col[0] }}</option>
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <select ref="sortOrderSelect" class="form-select form-select-sm text-capitalize" v-model="filterOrder" @input="routeFilter">
+                    <option value="" style="font-weight: bold" disabled>{{ t("filter.order") }}</option>
+                    <option v-for="o in order" :key="o" :value="o">{{ o }}</option>
+                  </select>
+                </div>
+                <div class="col-auto">
+                  <select ref="filterLimitSelect" id="limit" class="form-select form-select-sm" v-model="filterLimit" @change="routeFilter">
+                    <option value="" style="font-weight: bold" disabled>{{ t("filter.limit") }}</option>
+                    <option v-for="limit in limits" :key="limit" :value="limit">{{ limit }}</option>
+                  </select>
+                </div>
 
-              <div class="col-auto">
-                <button type="button" class="btn btn-primary" @click="resetFilters">
-                  {{ t("filter.reset") }}
-                </button>
+                <div class="col-auto">
+                  <button type="button" class="btn btn-primary" @click="resetFilters">
+                    {{ t("filter.reset") }}
+                  </button>
+                </div>
               </div>
+              <!-- filter row -->
             </div>
-            <!-- filter row -->
+            <button class="btn btn-primary btn-sm" @click="routeFilter" v-if="route.params.type === 'random'">Refresh</button>
           </div>
-          <button class="btn btn-primary btn-sm" @click="routeFilter" v-if="route.params.type === 'random'">Refresh</button>
         </div>
       </div>
     </div>
-  </div>
-  <div class="row">
-    <div v-for="recording in recordings" :key="recording.recordingId" class="mb-3 col-lg-6 col-xl-4 col-xxl-4 col-md-8 col-sm-8">
-      <RecordingItem :show-title="true" :recording="recording" @destroyed="destroyRecording" :show-selection="false" />
+    <div class="row">
+      <div v-for="recording in recordings" :key="recording.recordingId" class="mb-3 col-lg-6 col-xl-4 col-xxl-4 col-md-8 col-sm-8">
+        <RecordingItem :show-title="true" :recording="recording" @destroyed="destroyRecording" :show-selection="false" />
+      </div>
     </div>
-  </div>
+  </LoadIndicator>
 </template>
 
 <script setup lang="ts">
@@ -52,11 +54,14 @@ import { onMounted, ref, useTemplateRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { createClient } from "@/services/api/v1/ClientFactory";
+import LoadIndicator from "@/components/LoadIndicator.vue";
 
 const { t } = useI18n();
 
 const route = useRoute();
 const router = useRouter();
+
+const isLoading = ref(true);
 
 watch(
   () => route.query,
@@ -112,9 +117,11 @@ const destroyRecording = (recording: RecordingResponse) => {
 };
 
 const fetch = async () => {
+  isLoading.value = true;
   const client = createClient();
   const data = await client.recordings.filterDetail((route.query.column as string) || "created_at", (route.query.order as string) || "desc", (route.query.limit as string) || "25");
   recordings.value = data || [];
+  isLoading.value = false;  
 };
 
 onMounted(fetch);

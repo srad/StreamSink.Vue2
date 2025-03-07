@@ -100,17 +100,11 @@ const emit = defineEmits<{
 // Declarations
 // --------------------------------------------------------------------------------------
 
-onMounted(async () => {
-  const client = createClient();
-  const res = await Promise.all<[Promise<boolean>, Promise<HelpersDiskInfo>]>([client.isRecording(), client.info.diskList()]);
-  const [recRes, diskRes] = res;
-  diskAvailablePercentage.value = diskRes.pcent;
-  isRecording.value = recRes;
-});
-
+// Stores
 const channelStore = useChannelStore();
 const jobStore = useJobStore();
 
+// Refs
 const diskAvailablePercentage = ref(0);
 const collapseNav = ref(true);
 const isRecording = ref(false);
@@ -131,7 +125,7 @@ const jobs = computed(() => jobStore.getOpen);
 const jobsCount = computed(() => jobStore.jobsCount);
 
 // --------------------------------------------------------------------------------------
-// Methods
+// Functions
 // --------------------------------------------------------------------------------------
 
 const query = async () => {
@@ -159,23 +153,37 @@ const record = async () => {
   }
 };
 
+const initialLoad = async () => {
+  const client = createClient();
+  const res = await Promise.all<[Promise<boolean>, Promise<HelpersDiskInfo>]>([client.isRecording(), client.info.diskList()]);
+  const [recRes, diskRes] = res;
+  diskAvailablePercentage.value = diskRes.pcent;
+  isRecording.value = recRes;
+};
+
 // --------------------------------------------------------------------------------------
 // Watchers
 // --------------------------------------------------------------------------------------
 
 watch(route, () => (collapseNav.value = true));
 
-onMounted(async () => {
-  await connectSocket();
+// --------------------------------------------------------------------------------------
+// Hooks
+// --------------------------------------------------------------------------------------
 
-  socketOn(MessageType.HeartBeat, (nextUpdate) => {
-    heartBeatNextUpdate.value = nextUpdate as number;
-    const id = setInterval(() => {
-      heartBeatNextUpdate.value -= 1;
-      if (heartBeatNextUpdate.value <= 0) {
-        clearInterval(id);
-      }
-    }, 1000);
+onMounted(async () => {
+  await initialLoad();
+
+  connectSocket().then(async () => {
+    socketOn(MessageType.HeartBeat, (nextUpdate) => {
+      heartBeatNextUpdate.value = nextUpdate as number;
+      const id = setInterval(() => {
+        heartBeatNextUpdate.value -= 1;
+        if (heartBeatNextUpdate.value <= 0) {
+          clearInterval(id);
+        }
+      }, 1000);
+    });
   });
 
   thread = setInterval(query, 1000 * 10);

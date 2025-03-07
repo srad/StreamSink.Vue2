@@ -54,16 +54,16 @@ router.beforeEach((to, from, next) => {
   const isLoggedIn = authStore.isLoggedIn;
 
   if (!isLoggedIn && publicPages.includes(to.path)) {
-    alert("''");
     next();
     return;
   }
 
   if (isLoggedIn && publicPages.includes(to.path)) {
-    alert('/');
     next("/");
     return;
   }
+
+  next();
 });
 
 export default router;
