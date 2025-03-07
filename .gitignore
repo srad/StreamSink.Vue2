@@ -31,3 +31,6 @@ coverage
 
 logs/
 tests_output/
+
+public/build.js
+public/env.js
